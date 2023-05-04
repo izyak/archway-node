@@ -1,12 +1,23 @@
 #!/bin/bash
 
-WALLET=node2-account
+function log() {
+	echo "=============================================="
+}
+
+WALLET=node1-account
 CONTRACT_WASM=artifacts/archway_starter.wasm 
-# ENDPOINT=https://rpc.constantine-2.archway.tech:443 
+
+### LOCALNET ###
 ENDPOINT=http://localhost:26657
 CHAIN_ID=my-chain
+TOKEN=validatortoken
 
-RES=$(archwayd tx wasm store $CONTRACT_WASM --from $WALLET --node $ENDPOINT --chain-id $CHAIN_ID --gas-prices 0.25validatortoken --gas auto --gas-adjustment 1.3 -y --output json -b block)
+### TESTNET ###
+# ENDPOINT=https://rpc.constantine-2.archway.tech:443 
+# CHAIN_ID=constantine-2
+# TOKEN=uconst
+
+RES=$(archwayd tx wasm store $CONTRACT_WASM --from $WALLET --node $ENDPOINT --chain-id $CHAIN_ID --gas-prices 0.02$TOKEN --gas auto --gas-adjustment 1.3 -y --output json -b block)
 
 echo "Result: "
 echo $RES
@@ -16,17 +27,16 @@ CODE_ID=$(echo $RES | jq -r '.logs[0].events[] | select(.type=="store_code") | .
 echo "Code ID: "
 echo $CODE_ID
 
-# The two binaries should be identical
-# archwayd query wasm code $CODE_ID --node https://rpc.constantine-2.archway.tech:443 download.wasm
-# diff artifacts/cw_nameservice.wasm download.wasm
-
 # Cosntructor params // stringified json
-INIT='{"count":0}'
-archwayd tx wasm instantiate $CODE_ID "$INIT" --from $WALLET --label "name service" --node $ENDPOINT --chain-id $CHAIN_ID --gas-prices 0.25validatortoken --gas auto --gas-adjustment 1.3 -y --no-admin
-
+INIT='{"count":1}'
+archwayd tx wasm instantiate $CODE_ID "$INIT" --from $WALLET --label "name service" --node $ENDPOINT --chain-id $CHAIN_ID --gas-prices 0.02$TOKEN --gas auto --gas-adjustment 1.3 -y --no-admin
+log
+echo "sleep for 10 seconds"
+log
+sleep 10
 archwayd query wasm list-contract-by-code $CODE_ID --node $ENDPOINT --output json
 
-echo "+++++"
+log
 CONTRACT=$(archwayd query wasm list-contract-by-code $CODE_ID --node $ENDPOINT --output json | jq -r '.contracts[-1]')
 echo $CONTRACT
 
